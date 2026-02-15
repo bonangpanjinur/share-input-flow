@@ -155,6 +155,7 @@ export default function DataEntryForm({ groupId, entry, onCancel, onSaved, isPub
         {canEdit("alamat") && (
           <div className="space-y-2">
             <Label>Alamat</Label>
+            <p className="text-xs text-muted-foreground">Ketik manual atau tekan ikon lokasi untuk ambil otomatis</p>
             <div className="flex gap-2">
               <Input value={alamat} onChange={(e) => setAlamat(e.target.value)} placeholder="Ketik alamat..." className="flex-1" />
               <Button type="button" variant="outline" size="icon" onClick={getLocation} disabled={gettingLocation}>
