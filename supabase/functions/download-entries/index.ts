@@ -1,10 +1,10 @@
 import { serve } from "https://deno.land/std@0.168.0/http/server.ts";
 import { createClient } from "https://esm.sh/@supabase/supabase-js@2";
-import { JSZip } from "https://esm.sh/jszip@3.10.1";
+import JSZip from "https://esm.sh/jszip@3.10.1";
 
 const corsHeaders = {
   "Access-Control-Allow-Origin": "*",
-  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type",
+  "Access-Control-Allow-Headers": "authorization, x-client-info, apikey, content-type, x-supabase-client-platform, x-supabase-client-platform-version, x-supabase-client-runtime, x-supabase-client-runtime-version",
 };
 
 serve(async (req) => {
@@ -15,7 +15,7 @@ serve(async (req) => {
   try {
     const authHeader = req.headers.get("Authorization");
     if (!authHeader?.startsWith("Bearer ")) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
     const supabaseAdmin = createClient(
@@ -29,12 +29,13 @@ serve(async (req) => {
       { global: { headers: { Authorization: authHeader } } }
     );
 
-    const { data: claims, error: claimsError } = await supabaseUser.auth.getClaims(authHeader.replace("Bearer ", ""));
-    if (claimsError || !claims?.claims?.sub) {
-      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: corsHeaders });
+    // Get current user via getUser
+    const { data: { user }, error: userError } = await supabaseUser.auth.getUser();
+    if (userError || !user) {
+      return new Response(JSON.stringify({ error: "Unauthorized" }), { status: 401, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    const callerId = claims.claims.sub as string;
+    const callerId = user.id;
     const { data: callerRole } = await supabaseAdmin
       .from("user_roles")
       .select("role")
@@ -42,17 +43,16 @@ serve(async (req) => {
       .single();
 
     if (!callerRole || !["super_admin", "admin"].includes(callerRole.role)) {
-      return new Response(JSON.stringify({ error: "Forbidden: only Super Admin and Admin can download" }), {
-        status: 403, headers: corsHeaders,
+      return new Response(JSON.stringify({ error: "Forbidden" }), {
+        status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
     const { entry_ids } = await req.json();
     if (!entry_ids || !Array.isArray(entry_ids) || entry_ids.length === 0) {
-      return new Response(JSON.stringify({ error: "entry_ids required" }), { status: 400, headers: corsHeaders });
+      return new Response(JSON.stringify({ error: "entry_ids required" }), { status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" } });
     }
 
-    // Fetch entries using admin client (bypasses RLS for convenience, caller already authorized)
     const { data: entries, error: entriesError } = await supabaseAdmin
       .from("data_entries")
       .select("*")
@@ -60,7 +60,7 @@ serve(async (req) => {
 
     if (entriesError || !entries) {
       return new Response(JSON.stringify({ error: entriesError?.message || "Entries not found" }), {
-        status: 400, headers: corsHeaders,
+        status: 400, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });
     }
 
@@ -70,7 +70,6 @@ serve(async (req) => {
       const folderName = (entry.nama || `entry-${entry.id.slice(0, 8)}`).replace(/[/\\?%*:|"<>]/g, "_");
       const folder = zip.folder(folderName)!;
 
-      // Add info.txt with entry metadata
       const info = [
         `Nama: ${entry.nama || "-"}`,
         `Alamat: ${entry.alamat || "-"}`,
@@ -79,14 +78,12 @@ serve(async (req) => {
       ].join("\n");
       folder.file("info.txt", info);
 
-      // Helper to download and add file
       const addFile = async (url: string | null, filename: string) => {
         if (!url) return;
         try {
           const res = await fetch(url);
           if (res.ok) {
             const buffer = await res.arrayBuffer();
-            // Extract extension from URL
             const urlPath = new URL(url).pathname;
             const ext = urlPath.split(".").pop() || "bin";
             folder.file(`${filename}.${ext}`, buffer);
@@ -119,6 +116,6 @@ serve(async (req) => {
     });
   } catch (err) {
     console.error("Download error:", err);
-    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: corsHeaders });
+    return new Response(JSON.stringify({ error: err.message }), { status: 500, headers: { ...corsHeaders, "Content-Type": "application/json" } });
   }
 });
