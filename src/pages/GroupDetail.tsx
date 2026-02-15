@@ -11,13 +11,13 @@ import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
+import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Users, FileText, Trash2 } from "lucide-react";
+import { Plus, Users, FileText, Trash2, Download, Loader2 } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import type { Tables } from "@/integrations/supabase/types";
 
 type DataEntry = Tables<"data_entries">;
-type GroupMember = Tables<"group_members">;
 
 interface MemberWithProfile {
   id: string;
@@ -38,6 +38,12 @@ export default function GroupDetail() {
   const [addMemberOpen, setAddMemberOpen] = useState(false);
   const [availableUsers, setAvailableUsers] = useState<{ id: string; email: string | null; full_name: string | null }[]>([]);
   const [selectedUserId, setSelectedUserId] = useState("");
+
+  // Download state
+  const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
+  const [downloading, setDownloading] = useState(false);
+
+  const canDownload = role === "super_admin" || role === "admin";
 
   const fetchGroup = async () => {
     if (!groupId) return;
@@ -116,6 +122,67 @@ export default function GroupDetail() {
     fetchEntries();
   };
 
+  // Download handlers
+  const toggleEntry = (id: string) => {
+    setSelectedEntries((prev) => {
+      const next = new Set(prev);
+      if (next.has(id)) next.delete(id);
+      else next.add(id);
+      return next;
+    });
+  };
+
+  const toggleAll = () => {
+    if (selectedEntries.size === entries.length) {
+      setSelectedEntries(new Set());
+    } else {
+      setSelectedEntries(new Set(entries.map((e) => e.id)));
+    }
+  };
+
+  const handleDownload = async (ids: string[]) => {
+    setDownloading(true);
+    try {
+      const { data: sessionData } = await supabase.auth.getSession();
+      const token = sessionData.session?.access_token;
+      if (!token) throw new Error("Not authenticated");
+
+      const res = await fetch(
+        `${import.meta.env.VITE_SUPABASE_URL}/functions/v1/download-entries`,
+        {
+          method: "POST",
+          headers: {
+            Authorization: `Bearer ${token}`,
+            "Content-Type": "application/json",
+            apikey: import.meta.env.VITE_SUPABASE_PUBLISHABLE_KEY,
+          },
+          body: JSON.stringify({ entry_ids: ids }),
+        }
+      );
+
+      if (!res.ok) {
+        const err = await res.json();
+        throw new Error(err.error || "Download gagal");
+      }
+
+      const blob = await res.blob();
+      const url = URL.createObjectURL(blob);
+      const a = document.createElement("a");
+      a.href = url;
+      a.download = res.headers.get("Content-Disposition")?.match(/filename="(.+)"/)?.[1] || "data.zip";
+      document.body.appendChild(a);
+      a.click();
+      a.remove();
+      URL.revokeObjectURL(url);
+
+      toast({ title: "Download berhasil" });
+      setSelectedEntries(new Set());
+    } catch (err: any) {
+      toast({ title: "Download gagal", description: err.message, variant: "destructive" });
+    }
+    setDownloading(false);
+  };
+
   if (!group) return <div className="text-muted-foreground">Memuat...</div>;
 
   return (
@@ -140,10 +207,24 @@ export default function GroupDetail() {
             />
           ) : (
             <>
-              <div className="mb-4">
+              <div className="mb-4 flex flex-wrap items-center gap-2">
                 <Button onClick={() => setShowEntryForm(true)}>
                   <Plus className="mr-2 h-4 w-4" /> Tambah Data
                 </Button>
+                {canDownload && selectedEntries.size > 0 && (
+                  <Button
+                    variant="outline"
+                    onClick={() => handleDownload([...selectedEntries])}
+                    disabled={downloading}
+                  >
+                    {downloading ? (
+                      <Loader2 className="mr-2 h-4 w-4 animate-spin" />
+                    ) : (
+                      <Download className="mr-2 h-4 w-4" />
+                    )}
+                    Download {selectedEntries.size} data
+                  </Button>
+                )}
               </div>
               {entries.length === 0 ? (
                 <Card>
@@ -155,6 +236,14 @@ export default function GroupDetail() {
                     <Table>
                       <TableHeader>
                         <TableRow>
+                          {canDownload && (
+                            <TableHead className="w-10">
+                              <Checkbox
+                                checked={selectedEntries.size === entries.length && entries.length > 0}
+                                onCheckedChange={toggleAll}
+                              />
+                            </TableHead>
+                          )}
                           <TableHead>Nama</TableHead>
                           <TableHead>Alamat</TableHead>
                           <TableHead>No HP</TableHead>
@@ -167,18 +256,39 @@ export default function GroupDetail() {
                       </TableHeader>
                       <TableBody>
                         {entries.map((e) => (
-                          <TableRow key={e.id} className="cursor-pointer" onClick={() => setEditingEntry(e)}>
-                            <TableCell className="font-medium">{e.nama || "-"}</TableCell>
-                            <TableCell className="max-w-[150px] truncate">{e.alamat || "-"}</TableCell>
-                            <TableCell>{e.nomor_hp || "-"}</TableCell>
+                          <TableRow key={e.id}>
+                            {canDownload && (
+                              <TableCell onClick={(ev) => ev.stopPropagation()}>
+                                <Checkbox
+                                  checked={selectedEntries.has(e.id)}
+                                  onCheckedChange={() => toggleEntry(e.id)}
+                                />
+                              </TableCell>
+                            )}
+                            <TableCell className="font-medium cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nama || "-"}</TableCell>
+                            <TableCell className="max-w-[150px] truncate cursor-pointer" onClick={() => setEditingEntry(e)}>{e.alamat || "-"}</TableCell>
+                            <TableCell className="cursor-pointer" onClick={() => setEditingEntry(e)}>{e.nomor_hp || "-"}</TableCell>
                             <TableCell>{e.ktp_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{e.nib_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{e.foto_produk_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>{e.foto_verifikasi_url ? <Badge variant="secondary">✓</Badge> : "-"}</TableCell>
                             <TableCell>
-                              <Button variant="ghost" size="icon" onClick={(ev) => { ev.stopPropagation(); handleDeleteEntry(e.id); }}>
-                                <Trash2 className="h-4 w-4 text-destructive" />
-                              </Button>
+                              <div className="flex gap-1">
+                                {canDownload && (
+                                  <Button
+                                    variant="ghost"
+                                    size="icon"
+                                    onClick={() => handleDownload([e.id])}
+                                    disabled={downloading}
+                                    title="Download entri ini"
+                                  >
+                                    <Download className="h-4 w-4" />
+                                  </Button>
+                                )}
+                                <Button variant="ghost" size="icon" onClick={() => handleDeleteEntry(e.id)}>
+                                  <Trash2 className="h-4 w-4 text-destructive" />
+                                </Button>
+                              </div>
                             </TableCell>
                           </TableRow>
                         ))}
