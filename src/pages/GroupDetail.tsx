@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter } from "lucide-react";
+import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import type { Tables, Enums } from "@/integrations/supabase/types";
 
@@ -210,6 +210,51 @@ export default function GroupDetail() {
     setDownloading(false);
   };
 
+  const handleExportCsv = () => {
+    const dataToExport = selectedEntries.size > 0
+      ? filteredEntries.filter((e) => selectedEntries.has(e.id))
+      : filteredEntries;
+
+    if (dataToExport.length === 0) {
+      toast({ title: "Tidak ada data untuk di-export", variant: "destructive" });
+      return;
+    }
+
+    const statusLabel = (s: string) => STATUS_CONFIG[s]?.label || s;
+    const headers = ["Nama", "Status", "Alamat", "Nomor HP", "KTP", "NIB", "Foto Produk", "Foto Verifikasi", "Tanggal Dibuat"];
+    const rows = dataToExport.map((e) => [
+      e.nama || "",
+      statusLabel(e.status),
+      e.alamat || "",
+      e.nomor_hp || "",
+      e.ktp_url || "",
+      e.nib_url || "",
+      e.foto_produk_url || "",
+      e.foto_verifikasi_url || "",
+      new Date(e.created_at).toLocaleDateString("id-ID"),
+    ]);
+
+    const escapeCsv = (val: string) => {
+      if (val.includes(",") || val.includes('"') || val.includes("\n")) {
+        return `"${val.replace(/"/g, '""')}"`;
+      }
+      return val;
+    };
+
+    const csv = [headers.join(","), ...rows.map((r) => r.map(escapeCsv).join(","))].join("\n");
+    const bom = "\uFEFF";
+    const blob = new Blob([bom + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    a.download = `${group?.name || "data"}-export.csv`;
+    document.body.appendChild(a);
+    a.click();
+    a.remove();
+    URL.revokeObjectURL(url);
+    toast({ title: `${dataToExport.length} data berhasil di-export ke CSV` });
+  };
+
   if (!group) return <div className="text-muted-foreground">Memuat...</div>;
 
   return (
@@ -251,6 +296,12 @@ export default function GroupDetail() {
                         <Download className="mr-2 h-4 w-4" />
                       )}
                       Download {selectedEntries.size} data
+                    </Button>
+                  )}
+                  {canDownload && (
+                    <Button variant="outline" onClick={handleExportCsv}>
+                      <FileSpreadsheet className="mr-2 h-4 w-4" />
+                      Export CSV{selectedEntries.size > 0 ? ` (${selectedEntries.size})` : ""}
                     </Button>
                   )}
                 </div>
