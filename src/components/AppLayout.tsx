@@ -2,6 +2,7 @@ import { ReactNode } from "react";
 import { useAuth } from "@/contexts/AuthContext";
 import { useIsMobile } from "@/hooks/use-mobile";
 import { useNavigate, useLocation } from "react-router-dom";
+import { useTheme } from "next-themes";
 import { Button } from "@/components/ui/button";
 import {
   LayoutDashboard,
@@ -11,6 +12,8 @@ import {
   LogOut,
   Shield,
   UserCog,
+  Sun,
+  Moon,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -37,6 +40,7 @@ const NAV_ITEMS = {
 
 export default function AppLayout({ children }: { children: ReactNode }) {
   const { role, signOut, user } = useAuth();
+  const { theme, setTheme } = useTheme();
   const isMobile = useIsMobile();
   const navigate = useNavigate();
   const location = useLocation();
@@ -62,6 +66,13 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               {user?.email?.split("@")[0]}
             </button>
             <span className="text-xs text-muted-foreground capitalize">{role}</span>
+            <Button
+              variant="ghost"
+              size="icon"
+              onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+            >
+              {theme === "dark" ? <Sun className="h-4 w-4" /> : <Moon className="h-4 w-4" />}
+            </Button>
             <Button variant="ghost" size="icon" onClick={handleSignOut}>
               <LogOut className="h-4 w-4" />
             </Button>
@@ -129,6 +140,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               <div className="text-xs font-medium capitalize">{role?.replace("_", " ")}</div>
             </div>
           </button>
+          <Button
+            variant="ghost"
+            size="sm"
+            className="w-full justify-start mb-1"
+            onClick={() => setTheme(theme === "dark" ? "light" : "dark")}
+          >
+            {theme === "dark" ? (
+              <Sun className="mr-2 h-4 w-4" />
+            ) : (
+              <Moon className="mr-2 h-4 w-4" />
+            )}
+            {theme === "dark" ? "Mode Terang" : "Mode Gelap"}
+          </Button>
           <Button variant="ghost" size="sm" className="w-full justify-start" onClick={handleSignOut}>
             <LogOut className="mr-2 h-4 w-4" />
             Keluar
