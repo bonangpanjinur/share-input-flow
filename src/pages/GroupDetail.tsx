@@ -13,7 +13,7 @@ import { Badge } from "@/components/ui/badge";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { Checkbox } from "@/components/ui/checkbox";
 import { toast } from "@/hooks/use-toast";
-import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet } from "lucide-react";
+import { Plus, Users, FileText, Trash2, Download, Loader2, CheckCircle2, Clock, ShieldCheck, Search, Filter, FileSpreadsheet, RefreshCw } from "lucide-react";
 import DataEntryForm from "@/components/DataEntryForm";
 import type { Tables, Enums } from "@/integrations/supabase/types";
 
@@ -255,6 +255,59 @@ export default function GroupDetail() {
     toast({ title: `${dataToExport.length} data berhasil di-export ke CSV` });
   };
 
+  // Bulk status update
+  const handleBulkStatusChange = async (newStatus: string) => {
+    if (selectedEntries.size === 0) return;
+    const ids = [...selectedEntries];
+    const { error } = await supabase
+      .from("data_entries")
+      .update({ status: newStatus } as any)
+      .in("id", ids);
+    if (error) {
+      toast({ title: "Gagal mengubah status", description: error.message, variant: "destructive" });
+    } else {
+      setEntries((prev) =>
+        prev.map((e) => (ids.includes(e.id) ? { ...e, status: newStatus } as any : e))
+      );
+      setSelectedEntries(new Set());
+      toast({ title: `${ids.length} entri diubah ke ${STATUS_CONFIG[newStatus]?.label || newStatus}` });
+    }
+  };
+
+  // Realtime subscription
+  useEffect(() => {
+    if (!groupId) return;
+    const channel = supabase
+      .channel(`entries-${groupId}`)
+      .on(
+        "postgres_changes",
+        { event: "*", schema: "public", table: "data_entries", filter: `group_id=eq.${groupId}` },
+        (payload) => {
+          if (payload.eventType === "INSERT") {
+            const newEntry = payload.new as DataEntry;
+            setEntries((prev) => [newEntry, ...prev]);
+            toast({ title: "Data baru masuk", description: newEntry.nama || "Entri baru ditambahkan" });
+          } else if (payload.eventType === "UPDATE") {
+            const updated = payload.new as DataEntry;
+            setEntries((prev) => prev.map((e) => (e.id === updated.id ? updated : e)));
+            const oldStatus = (payload.old as any)?.status;
+            if (oldStatus && oldStatus !== updated.status) {
+              toast({
+                title: "Status berubah",
+                description: `${updated.nama || "Entri"}: ${STATUS_CONFIG[oldStatus]?.label || oldStatus} → ${STATUS_CONFIG[updated.status]?.label || updated.status}`,
+              });
+            }
+          } else if (payload.eventType === "DELETE") {
+            const deleted = payload.old as DataEntry;
+            setEntries((prev) => prev.filter((e) => e.id !== deleted.id));
+          }
+        }
+      )
+      .subscribe();
+
+    return () => { supabase.removeChannel(channel); };
+  }, [groupId]);
+
   if (!group) return <div className="text-muted-foreground">Memuat...</div>;
 
   return (
@@ -303,6 +356,24 @@ export default function GroupDetail() {
                       <FileSpreadsheet className="mr-2 h-4 w-4" />
                       Export CSV{selectedEntries.size > 0 ? ` (${selectedEntries.size})` : ""}
                     </Button>
+                  )}
+                  {canDownload && selectedEntries.size > 0 && (
+                    <Select onValueChange={handleBulkStatusChange}>
+                      <SelectTrigger className="w-[200px]">
+                        <RefreshCw className="mr-2 h-4 w-4" />
+                        <SelectValue placeholder={`Ubah status (${selectedEntries.size})`} />
+                      </SelectTrigger>
+                      <SelectContent>
+                        {Object.entries(STATUS_CONFIG).map(([key, cfg]) => (
+                          <SelectItem key={key} value={key}>
+                            <span className="flex items-center gap-1">
+                              <cfg.icon className="h-3 w-3" />
+                              {cfg.label}
+                            </span>
+                          </SelectItem>
+                        ))}
+                      </SelectContent>
+                    </Select>
                   )}
                 </div>
                 <div className="flex flex-wrap items-center gap-2">
