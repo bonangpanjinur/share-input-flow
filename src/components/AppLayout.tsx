@@ -14,6 +14,7 @@ import {
   UserCog,
   Sun,
   Moon,
+  Settings,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -22,6 +23,7 @@ const NAV_ITEMS = {
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { label: "Kelola User", icon: Users, path: "/users" },
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
+    { label: "Pengaturan", icon: Settings, path: "/settings" },
   ],
   admin: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
@@ -59,7 +61,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
         <header className="flex items-center justify-between border-b px-4 py-3">
           <div className="flex items-center gap-2">
             <Shield className="h-5 w-5 text-primary" />
-            <span className="text-sm font-semibold">Data Halal</span>
+            <span className="text-sm font-bold tracking-tight">HalalTrack</span>
           </div>
           <div className="flex items-center gap-2">
             <button onClick={() => navigate("/profile")} className="text-xs text-muted-foreground hover:text-foreground transition-colors">
@@ -108,9 +110,9 @@ export default function AppLayout({ children }: { children: ReactNode }) {
     <div className="flex min-h-screen bg-background">
       {/* Sidebar */}
       <aside className="flex w-56 flex-col border-r bg-sidebar-background">
-        <div className="flex items-center gap-2 border-b px-4 py-4">
-          <Shield className="h-6 w-6 text-primary" />
-          <span className="font-semibold">Data Halal</span>
+        <div className="flex items-center gap-2.5 border-b px-4 py-4">
+          <Shield className="h-6 w-6 text-sidebar-primary" />
+          <span className="font-bold tracking-tight text-sidebar-primary-foreground">HalalTrack</span>
         </div>
         <nav className="flex-1 space-y-1 p-2">
           {items.map((item) => (

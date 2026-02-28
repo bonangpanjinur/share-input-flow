@@ -6,7 +6,7 @@ import { Input } from "@/components/ui/input";
 import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
 import { Label } from "@/components/ui/label";
 import { toast } from "@/hooks/use-toast";
-import { Shield } from "lucide-react";
+import { Shield, ArrowRight } from "lucide-react";
 
 export default function Login() {
   const [email, setEmail] = useState("");
@@ -28,13 +28,13 @@ export default function Login() {
   };
 
   return (
-    <div className="flex min-h-screen items-center justify-center bg-muted/30 px-4">
-      <Card className="w-full max-w-sm">
-        <CardHeader className="text-center">
-          <div className="mx-auto mb-2 flex h-12 w-12 items-center justify-center rounded-full bg-primary">
-            <Shield className="h-6 w-6 text-primary-foreground" />
+    <div className="flex min-h-screen items-center justify-center bg-gradient-to-br from-primary/5 via-background to-primary/10 px-4">
+      <Card className="w-full max-w-sm shadow-lg border-0">
+        <CardHeader className="text-center pb-2">
+          <div className="mx-auto mb-3 flex h-14 w-14 items-center justify-center rounded-2xl bg-primary shadow-md">
+            <Shield className="h-7 w-7 text-primary-foreground" />
           </div>
-          <CardTitle className="text-xl">Input Data Halal</CardTitle>
+          <CardTitle className="text-2xl font-bold tracking-tight">HalalTrack</CardTitle>
           <CardDescription>Masuk ke akun Anda</CardDescription>
         </CardHeader>
         <CardContent>
@@ -61,8 +61,8 @@ export default function Login() {
                 required
               />
             </div>
-            <Button type="submit" className="w-full" disabled={loading}>
-              {loading ? "Memproses..." : "Masuk"}
+            <Button type="submit" className="w-full gap-2" disabled={loading}>
+              {loading ? "Memproses..." : <>Masuk <ArrowRight className="h-4 w-4" /></>}
             </Button>
           </form>
         </CardContent>

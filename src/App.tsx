@@ -14,6 +14,7 @@ import GroupDetail from "@/pages/GroupDetail";
 import ShareLinks from "@/pages/ShareLinks";
 import PublicForm from "@/pages/PublicForm";
 import Profile from "@/pages/Profile";
+import AppSettings from "@/pages/AppSettings";
 import NotFound from "@/pages/NotFound";
 import { ReactNode } from "react";
 
@@ -47,6 +48,7 @@ const AppRoutes = () => (
     <Route path="/groups/:id" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
     <Route path="/share" element={<ProtectedRoute allowedRoles={["lapangan"]}><ShareLinks /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
+    <Route path="/settings" element={<ProtectedRoute allowedRoles={["super_admin"]}><AppSettings /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
   </Routes>
 );
