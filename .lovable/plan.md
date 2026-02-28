@@ -1,75 +1,77 @@
 
 
-## Aplikasi Input Data Halal - Group Based
+## Fitur Tracking Sertifikat Halal untuk UMKM
 
 ### Ringkasan
-Aplikasi input data berbasis grup dengan 4 role (Super Admin, Admin, Lapangan, NIB). Data dikumpulkan secara kolaboratif dalam "Group Halal" yang dibuat Super Admin, dimana setiap role mengisi bagian form sesuai wewenangnya. Form Lapangan bisa dishare ke orang lain tanpa login via link & QR Code.
+Menambahkan sistem tracking proses sertifikasi halal yang bisa diakses UMKM tanpa login (via kode tracking) atau dengan login. Status diperbarui otomatis oleh sistem (saat NIB/sertifikat diupload) dan manual oleh admin.
 
----
+### Alur Proses
+```text
+[1. Data Terisi] --> [2. NIB Selesai] --> [3. Pengajuan] --> [4. Sertifikat Selesai]
+    (auto)            (auto saat          (manual oleh        (auto saat file
+                       NIB diupload)       admin)              sertifikat diupload
+                                                               + tombol download)
+```
 
-### 1. Autentikasi & Manajemen User
-- Login page (email + password)
-- Super Admin membuat akun user dan assign role (Admin / Lapangan / NIB)
-- Dashboard Super Admin: daftar semua user, buat user baru, edit, hapus
-- Tidak ada registrasi publik
+### Perubahan yang Diperlukan
 
-### 2. Group Halal (Super Admin)
-- Super Admin bisa membuat banyak Group Halal (dinamis)
-- Setiap group memiliki nama dan anggota (Admin, Lapangan, NIB yang di-assign)
-- Super Admin bisa menambah/menghapus anggota dari group
-- Super Admin melihat semua data lengkap per group
-- Super Admin juga bisa mengisi semua field form
+#### 1. Database Migration
+- Tambah kolom `sertifikat_url` (text) di `data_entries` -- file sertifikat halal
+- Tambah kolom `tracking_code` (text, unique) di `data_entries` -- kode untuk tracking publik
+- Tambah nilai enum `entry_status`: `nib_selesai`, `pengajuan`, `sertifikat_selesai`
+- Trigger otomatis:
+  - Generate `tracking_code` saat INSERT (format: `HT-XXXXXX`)
+  - Update status ke `nib_selesai` saat `nib_url` diisi
+  - Update status ke `sertifikat_selesai` saat `sertifikat_url` diisi
+- RLS policy: allow public SELECT on `data_entries` by `tracking_code` (hanya kolom tertentu via view)
 
-### 3. Form Input Data (Per Entri dalam Group)
-Setiap entri data dalam group memiliki field berikut:
-- **Nama** (teks)
-- **Foto KTP** (foto langsung dari kamera / upload file)
-- **Alamat** (ketik manual atau ambil lokasi otomatis via OpenStreetMap)
-- **Nomor HP** (teks)
-- **NIB** (upload PDF / foto)
-- **Foto Produk** (foto langsung / upload)
-- **Foto Verifikasi Lapangan** (foto langsung / upload)
+#### 2. Public Tracking View (Database)
+- Buat view `public.tracking_view` yang hanya expose: `tracking_code`, `nama`, `status`, `sertifikat_url`, `created_at` -- tanpa data sensitif (KTP, alamat, HP)
+- RLS aman karena view hanya menampilkan field non-sensitif
 
-Akses per role:
-| Field | Super Admin | Admin | Lapangan | NIB |
-|---|---|---|---|---|
-| Nama | ✅ | ✅ | ✅ | ❌ |
-| Foto KTP | ✅ | ✅ | ✅ | ❌ |
-| Alamat | ✅ | ✅ | ✅ | ❌ |
-| Nomor HP | ✅ | ✅ | ✅ | ❌ |
-| NIB | ✅ | ✅ | ❌ | ✅ |
-| Foto Produk | ✅ | ✅ | ❌ | ❌ |
-| Foto Verifikasi | ✅ | ✅ | ❌ | ❌ |
+#### 3. Halaman Tracking Publik (`/tracking`)
+- Buat `src/pages/TrackingPage.tsx`
+- Input field untuk kode tracking (format HT-XXXXXX)
+- Tampilkan progress steps visual:
+  - Data Terisi (check icon hijau)
+  - NIB Selesai (check/pending)
+  - Pengajuan (check/pending)
+  - Sertifikat Selesai (check/pending + tombol Download)
+- Tidak perlu login
 
-Data bersifat kolaboratif: field yang diisi Lapangan akan terlihat oleh Admin saat membuka entri yang sama.
+#### 4. Update PublicForm - Tampilkan Kode Tracking
+- Setelah submit berhasil, tampilkan kode tracking ke UMKM
+- Pesan: "Simpan kode ini untuk melacak proses sertifikat Anda: HT-XXXXXX"
+- Tombol copy kode + link ke halaman tracking
 
-### 4. Share Form (Role Lapangan)
-- Lapangan bisa generate **link unik + QR Code** untuk form inputnya
-- Orang lain bisa mengisi form (Nama, KTP, Alamat, No HP) **tanpa login**
-- Data yang diisi masuk ke akun Lapangan yang membagikan link
-- Link bisa dinonaktifkan kapan saja
+#### 5. Update Form Admin - Upload Sertifikat + Status Manual
+- Tambah field upload sertifikat halal di `DataEntryForm` (hanya untuk super_admin/admin)
+- Tambah dropdown status manual "Pengajuan" di `GroupDetail`
+- Update `STATUS_CONFIG` dengan status baru (`nib_selesai`, `pengajuan`, `sertifikat_selesai`)
 
-### 5. Download Data (Super Admin & Admin)
-- Download per entri: otomatis jadi **folder** berisi semua file (KTP, NIB PDF, foto produk, foto verifikasi)
-- Download banyak sekaligus: pilih beberapa entri → download sebagai **ZIP** berisi folder per nama
-- Bisa pilih satu per satu atau pilih semua
-- Nama folder = nama dari data entri tersebut
+#### 6. Update Routing
+- Tambah route `/tracking` dan `/tracking/:code` di `App.tsx` (public, tanpa login)
 
-### 6. Dashboard per Role
-- **Super Admin**: Kelola group, kelola user, lihat semua data, download
-- **Admin**: Lihat group yang di-assign, isi form lengkap, download data
-- **Lapangan**: Lihat group yang di-assign, isi field yang diizinkan, share form
-- **NIB**: Lihat group yang di-assign, hanya input NIB
+#### 7. Update Dashboard
+- Statistik status baru ditampilkan di chart
 
-### 7. Desain
-- Simple & clean, minimalis
-- Mobile-friendly (karena Lapangan kemungkinan pakai HP di lapangan)
-- Navigasi sidebar untuk desktop, bottom nav untuk mobile
+### Detail Teknis
 
-### 8. Backend (Supabase / Lovable Cloud)
-- Database untuk users, groups, group members, data entries
-- File storage untuk foto KTP, NIB, foto produk, foto verifikasi
-- Edge function untuk generate ZIP download
-- Role-based access control (RLS)
-- Public form endpoint untuk shared forms (tanpa login)
+**File yang dibuat:**
+- `src/pages/TrackingPage.tsx` -- halaman tracking publik
+
+**File yang diubah:**
+- `src/App.tsx` -- tambah route tracking
+- `src/pages/PublicForm.tsx` -- tampilkan tracking code setelah submit
+- `src/components/DataEntryForm.tsx` -- tambah field upload sertifikat
+- `src/pages/GroupDetail.tsx` -- update STATUS_CONFIG dengan status baru + tampilkan tracking code
+- `src/pages/Dashboard.tsx` -- update status labels/colors untuk status baru
+
+**Database migration:**
+- Alter `entry_status` enum (tambah 3 nilai baru)
+- Alter `data_entries` (tambah 2 kolom)
+- Create trigger untuk auto-generate tracking code
+- Create trigger untuk auto-update status
+- Create view `tracking_view`
+- RLS policy untuk akses publik ke view
 
