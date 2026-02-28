@@ -8,9 +8,17 @@ import { Badge } from "@/components/ui/badge";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
 import { Plus, Copy, QrCode, Trash2 } from "lucide-react";
-import type { Tables } from "@/integrations/supabase/types";
 
-type SharedLink = Tables<"shared_links">;
+interface LinkRow {
+  id: string;
+  group_id: string;
+  token: string;
+  slug: string | null;
+  is_active: boolean;
+  created_at: string;
+  user_id: string;
+  group_name?: string;
+}
 
 interface GroupOption {
   id: string;
@@ -19,7 +27,7 @@ interface GroupOption {
 
 export default function ShareLinks() {
   const { user } = useAuth();
-  const [links, setLinks] = useState<(SharedLink & { group_name?: string })[]>([]);
+  const [links, setLinks] = useState<LinkRow[]>([]);
   const [groups, setGroups] = useState<GroupOption[]>([]);
   const [selectedGroup, setSelectedGroup] = useState("");
   const [creating, setCreating] = useState(false);
@@ -28,10 +36,10 @@ export default function ShareLinks() {
     if (!user) return;
     const { data } = await supabase.from("shared_links").select("*").eq("user_id", user.id);
     if (data) {
-      const groupIds = [...new Set(data.map((l) => l.group_id))];
+      const groupIds = [...new Set(data.map((l: any) => l.group_id))];
       const { data: groupData } = await supabase.from("groups").select("id, name").in("id", groupIds);
-      const gMap = new Map(groupData?.map((g) => [g.id, g.name]));
-      setLinks(data.map((l) => ({ ...l, group_name: gMap.get(l.group_id) })));
+      const gMap = new Map(groupData?.map((g: any) => [g.id, g.name]));
+      setLinks(data.map((l: any) => ({ ...l, group_name: gMap.get(l.group_id) })));
     }
   };
 
@@ -51,7 +59,7 @@ export default function ShareLinks() {
     const { error } = await supabase.from("shared_links").insert({
       user_id: user.id,
       group_id: selectedGroup,
-    });
+    } as any);
     setCreating(false);
     if (error) {
       toast({ title: "Gagal", description: error.message, variant: "destructive" });
@@ -62,7 +70,7 @@ export default function ShareLinks() {
     }
   };
 
-  const toggleActive = async (link: SharedLink) => {
+  const toggleActive = async (link: LinkRow) => {
     await supabase.from("shared_links").update({ is_active: !link.is_active }).eq("id", link.id);
     fetchLinks();
   };
@@ -72,10 +80,15 @@ export default function ShareLinks() {
     fetchLinks();
   };
 
-  const getShareUrl = (token: string) => `${window.location.origin}/public-form/${token}`;
+  const getShareUrl = (link: LinkRow) => {
+    if (link.slug) {
+      return `${window.location.origin}/f/${link.slug}`;
+    }
+    return `${window.location.origin}/public-form/${link.token}`;
+  };
 
-  const copyLink = (token: string) => {
-    navigator.clipboard.writeText(getShareUrl(token));
+  const copyLink = (link: LinkRow) => {
+    navigator.clipboard.writeText(getShareUrl(link));
     toast({ title: "Link disalin!" });
   };
 
@@ -110,6 +123,7 @@ export default function ShareLinks() {
             <TableHeader>
               <TableRow>
                 <TableHead>Group</TableHead>
+                <TableHead>URL</TableHead>
                 <TableHead>Status</TableHead>
                 <TableHead>Dibuat</TableHead>
                 <TableHead className="w-32">Aksi</TableHead>
@@ -119,6 +133,11 @@ export default function ShareLinks() {
               {links.map((l) => (
                 <TableRow key={l.id}>
                   <TableCell className="font-medium">{l.group_name}</TableCell>
+                  <TableCell>
+                    <code className="rounded bg-muted px-2 py-0.5 text-xs font-mono">
+                      /f/{l.slug || "..."}
+                    </code>
+                  </TableCell>
                   <TableCell>
                     <Badge
                       variant={l.is_active ? "default" : "secondary"}
@@ -133,10 +152,10 @@ export default function ShareLinks() {
                   </TableCell>
                   <TableCell>
                     <div className="flex gap-1">
-                      <Button variant="ghost" size="icon" onClick={() => copyLink(l.token)}>
+                      <Button variant="ghost" size="icon" onClick={() => copyLink(l)}>
                         <Copy className="h-4 w-4" />
                       </Button>
-                      <Button variant="ghost" size="icon" onClick={() => window.open(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(getShareUrl(l.token))}`, "_blank")}>
+                      <Button variant="ghost" size="icon" onClick={() => window.open(`https://api.qrserver.com/v1/create-qr-code/?size=300x300&data=${encodeURIComponent(getShareUrl(l))}`, "_blank")}>
                         <QrCode className="h-4 w-4" />
                       </Button>
                       <Button variant="ghost" size="icon" onClick={() => handleDelete(l.id)}>
@@ -148,7 +167,7 @@ export default function ShareLinks() {
               ))}
               {links.length === 0 && (
                 <TableRow>
-                  <TableCell colSpan={4} className="text-center text-muted-foreground py-8">
+                  <TableCell colSpan={5} className="text-center text-muted-foreground py-8">
                     Belum ada link
                   </TableCell>
                 </TableRow>

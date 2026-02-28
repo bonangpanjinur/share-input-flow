@@ -8,7 +8,7 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck } from "lucide-react";
+import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, Wallet } from "lucide-react";
 import { useAllFieldAccess } from "@/hooks/useFieldAccess";
 
 const COLOR_PRESETS = [
@@ -46,6 +46,15 @@ export default function AppSettings() {
   const [saving, setSaving] = useState(false);
   const [uploading, setUploading] = useState(false);
   const [savingAccess, setSavingAccess] = useState(false);
+  const [savingRates, setSavingRates] = useState(false);
+
+  // Commission rates
+  const [rates, setRates] = useState<Record<string, number>>({
+    super_admin: 0,
+    admin: 5000,
+    lapangan: 10000,
+    nib: 5000,
+  });
 
   const { allAccess, loading: accessLoading, refetch: refetchAccess } = useAllFieldAccess();
 
@@ -77,6 +86,19 @@ export default function AppSettings() {
       }
     };
     load();
+  }, []);
+
+  // Load commission rates
+  useEffect(() => {
+    const loadRates = async () => {
+      const { data } = await supabase.from("commission_rates").select("role, amount_per_entry");
+      if (data) {
+        const r: Record<string, number> = {};
+        data.forEach((row: any) => { r[row.role] = row.amount_per_entry; });
+        setRates(r);
+      }
+    };
+    loadRates();
   }, []);
 
   useEffect(() => {
@@ -160,6 +182,18 @@ export default function AppSettings() {
     toast({ title: "Hak akses berhasil disimpan" });
   };
 
+  const handleSaveRates = async () => {
+    setSavingRates(true);
+    for (const [r, amount] of Object.entries(rates)) {
+      await supabase
+        .from("commission_rates")
+        .update({ amount_per_entry: amount, updated_at: new Date().toISOString() } as any)
+        .eq("role", r as any);
+    }
+    setSavingRates(false);
+    toast({ title: "Tarif komisi berhasil disimpan" });
+  };
+
   if (role !== "super_admin") {
     return (
       <div className="flex items-center justify-center py-20">
@@ -179,6 +213,9 @@ export default function AppSettings() {
           </TabsTrigger>
           <TabsTrigger value="akses" className="flex-1 gap-2">
             <ShieldCheck className="h-4 w-4" /> Hak Akses
+          </TabsTrigger>
+          <TabsTrigger value="komisi" className="flex-1 gap-2">
+            <Wallet className="h-4 w-4" /> Komisi
           </TabsTrigger>
         </TabsList>
 
@@ -333,6 +370,42 @@ export default function AppSettings() {
           <Button onClick={handleSaveAccess} disabled={savingAccess} className="w-full gap-2">
             {savingAccess ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Simpan Hak Akses
+          </Button>
+        </TabsContent>
+
+        <TabsContent value="komisi" className="space-y-6 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <Wallet className="h-5 w-5" /> Tarif Komisi per Role
+              </CardTitle>
+              <CardDescription>
+                Atur jumlah komisi (Rupiah) per data baru yang berhasil diinput oleh masing-masing role
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-4">
+              {ROLES.map((r) => (
+                <div key={r.key} className="flex items-center justify-between rounded-lg border p-3">
+                  <span className="text-sm font-medium">{r.label}</span>
+                  <div className="flex items-center gap-2">
+                    <span className="text-sm text-muted-foreground">Rp</span>
+                    <Input
+                      type="number"
+                      value={rates[r.key] ?? 0}
+                      onChange={(e) => setRates((prev) => ({ ...prev, [r.key]: parseInt(e.target.value) || 0 }))}
+                      className="w-32 text-right font-mono"
+                      min={0}
+                      step={1000}
+                    />
+                  </div>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Button onClick={handleSaveRates} disabled={savingRates} className="w-full gap-2">
+            {savingRates ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Simpan Tarif Komisi
           </Button>
         </TabsContent>
       </Tabs>

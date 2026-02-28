@@ -1,36 +1,51 @@
 import { useEffect, useState } from "react";
 import { useParams, Link } from "react-router-dom";
 import { supabase } from "@/integrations/supabase/client";
-import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Button } from "@/components/ui/button";
 import { Shield, Copy, ExternalLink } from "lucide-react";
 import { toast } from "@/hooks/use-toast";
 import DataEntryForm from "@/components/DataEntryForm";
 
 export default function PublicForm() {
-  const { token } = useParams<{ token: string }>();
-  const [linkData, setLinkData] = useState<{ group_id: string; user_id: string } | null>(null);
+  const { token, slug } = useParams<{ token?: string; slug?: string }>();
+  const [linkData, setLinkData] = useState<{ group_id: string; user_id: string; link_id: string } | null>(null);
   const [invalid, setInvalid] = useState(false);
   const [submitted, setSubmitted] = useState(false);
   const [trackingCode, setTrackingCode] = useState<string | null>(null);
+  const [picName, setPicName] = useState<string>("");
 
   useEffect(() => {
     const validate = async () => {
-      if (!token) { setInvalid(true); return; }
-      const { data } = await supabase
+      if (!token && !slug) { setInvalid(true); return; }
+
+      let query = supabase
         .from("shared_links")
-        .select("group_id, user_id, is_active")
-        .eq("token", token)
-        .single();
+        .select("id, group_id, user_id, is_active, slug");
+
+      if (slug) {
+        query = query.eq("slug", slug);
+      } else {
+        query = query.eq("token", token!);
+      }
+
+      const { data } = await query.single();
 
       if (!data || !data.is_active) {
         setInvalid(true);
       } else {
-        setLinkData({ group_id: data.group_id, user_id: data.user_id });
+        setLinkData({ group_id: data.group_id, user_id: data.user_id, link_id: data.id });
+        // Fetch PIC name
+        const { data: profile } = await supabase
+          .from("profiles")
+          .select("full_name, email")
+          .eq("id", data.user_id)
+          .single();
+        setPicName(profile?.full_name || profile?.email?.split("@")[0] || "");
       }
     };
     validate();
-  }, [token]);
+  }, [token, slug]);
 
   if (invalid) {
     return (
@@ -96,11 +111,15 @@ export default function PublicForm() {
           <Shield className="mx-auto mb-2 h-10 w-10 text-primary" />
           <h1 className="text-xl font-bold">Input Data Halal</h1>
           <p className="text-sm text-muted-foreground">Silakan isi form di bawah ini</p>
+          {picName && (
+            <p className="text-xs text-muted-foreground mt-1">PIC: <span className="font-medium">{picName}</span></p>
+          )}
         </div>
         <DataEntryForm
           groupId={linkData.group_id}
           isPublic
           sharedLinkUserId={linkData.user_id}
+          sourceLinkId={linkData.link_id}
           onCancel={() => {}}
           onSaved={(newTrackingCode?: string) => {
             setTrackingCode(newTrackingCode ?? null);

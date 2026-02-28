@@ -15,6 +15,7 @@ import {
   Sun,
   Moon,
   Settings,
+  Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -24,22 +25,26 @@ const NAV_ITEMS = {
     { label: "Kelola User", icon: Users, path: "/users" },
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
     { label: "Share Link", icon: Link2, path: "/share" },
+    { label: "Komisi", icon: Wallet, path: "/komisi" },
     { label: "Pengaturan", icon: Settings, path: "/settings" },
   ],
   admin: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
     { label: "Share Link", icon: Link2, path: "/share" },
+    { label: "Komisi", icon: Wallet, path: "/komisi" },
   ],
   lapangan: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
     { label: "Share Link", icon: Link2, path: "/share" },
+    { label: "Komisi", icon: Wallet, path: "/komisi" },
   ],
   nib: [
     { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
     { label: "Group Halal", icon: FolderOpen, path: "/groups" },
     { label: "Share Link", icon: Link2, path: "/share" },
+    { label: "Komisi", icon: Wallet, path: "/komisi" },
   ],
 };
 

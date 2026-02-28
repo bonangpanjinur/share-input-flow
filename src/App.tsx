@@ -17,6 +17,7 @@ import TrackingPage from "@/pages/TrackingPage";
 import PublicStats from "@/pages/PublicStats";
 import Profile from "@/pages/Profile";
 import AppSettings from "@/pages/AppSettings";
+import Komisi from "@/pages/Komisi";
 import NotFound from "@/pages/NotFound";
 import { ReactNode } from "react";
 
@@ -43,6 +44,7 @@ const AppRoutes = () => (
   <Routes>
     <Route path="/login" element={<AuthRoute><Login /></AuthRoute>} />
     <Route path="/public-form/:token" element={<PublicForm />} />
+    <Route path="/f/:slug" element={<PublicForm />} />
     <Route path="/tracking" element={<TrackingPage />} />
     <Route path="/tracking/:code" element={<TrackingPage />} />
     <Route path="/statistik" element={<PublicStats />} />
@@ -52,6 +54,7 @@ const AppRoutes = () => (
     <Route path="/groups" element={<ProtectedRoute><Groups /></ProtectedRoute>} />
     <Route path="/groups/:id" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
     <Route path="/share" element={<ProtectedRoute><ShareLinks /></ProtectedRoute>} />
+    <Route path="/komisi" element={<ProtectedRoute><Komisi /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute allowedRoles={["super_admin"]}><AppSettings /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
