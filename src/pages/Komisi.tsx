@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Wallet, TrendingUp, Clock, CheckCircle, Users } from "lucide-react";
+import { Wallet, TrendingUp, Clock, CheckCircle, Users, Download } from "lucide-react";
 
 interface Commission {
   id: string;
@@ -107,25 +107,58 @@ export default function Komisi() {
   const formatRp = (n: number) =>
     new Intl.NumberFormat("id-ID", { style: "currency", currency: "IDR", minimumFractionDigits: 0 }).format(n);
 
+  const exportCSV = () => {
+    if (commissions.length === 0) {
+      toast({ title: "Tidak ada data untuk diexport", variant: "destructive" });
+      return;
+    }
+    const header = ["Data", "Jumlah", "Periode", "Status", "Tanggal"];
+    const rows = commissions.map((c) => [
+      c.entry_name || "-",
+      c.amount.toString(),
+      c.period || "-",
+      c.status === "paid" ? "Cair" : "Pending",
+      new Date(c.created_at).toLocaleDateString("id-ID"),
+    ]);
+    const csv = [header, ...rows].map((r) => r.map((v) => `"${v}"`).join(",")).join("\n");
+    const blob = new Blob(["\uFEFF" + csv], { type: "text/csv;charset=utf-8;" });
+    const url = URL.createObjectURL(blob);
+    const a = document.createElement("a");
+    a.href = url;
+    const userName = selectedUser === "mine" ? "saya" : users.find((u) => u.id === selectedUser)?.full_name || "user";
+    a.download = `laporan-komisi-${userName}-${currentPeriod}.csv`;
+    a.click();
+    URL.revokeObjectURL(url);
+    toast({ title: "Laporan berhasil didownload" });
+  };
+
   return (
     <div className="space-y-6">
-      <div className="flex items-center justify-between">
+      <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Komisi & Saldo</h1>
-        {isAdmin && (
-          <Select value={selectedUser} onValueChange={setSelectedUser}>
-            <SelectTrigger className="w-64">
-              <SelectValue placeholder="Lihat komisi user..." />
-            </SelectTrigger>
-            <SelectContent>
-              <SelectItem value="mine">Komisi Saya</SelectItem>
-              {users.map((u) => (
-                <SelectItem key={u.id} value={u.id}>
-                  {u.full_name || u.email || u.id.slice(0, 8)}
-                </SelectItem>
-              ))}
-            </SelectContent>
-          </Select>
-        )}
+        <div className="flex items-center gap-2">
+          {isAdmin && (
+            <Select value={selectedUser} onValueChange={setSelectedUser}>
+              <SelectTrigger className="w-52">
+                <SelectValue placeholder="Lihat komisi user..." />
+              </SelectTrigger>
+              <SelectContent>
+                <SelectItem value="mine">Komisi Saya</SelectItem>
+                {users.map((u) => (
+                  <SelectItem key={u.id} value={u.id}>
+                    {u.full_name || u.email || u.id.slice(0, 8)}
+                  </SelectItem>
+                ))}
+              </SelectContent>
+            </Select>
+          )}
+          {isAdmin && (
+            <Button variant="outline" size="sm" onClick={exportCSV}>
+              <Download className="mr-2 h-4 w-4" />
+              Export CSV
+            </Button>
+          )}
+        </div>
       </div>
 
       {/* Summary Cards */}
