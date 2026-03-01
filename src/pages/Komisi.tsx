@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useState, useMemo } from "react";
 import { supabase } from "@/integrations/supabase/client";
 import { useAuth } from "@/contexts/AuthContext";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
@@ -7,7 +7,7 @@ import { Badge } from "@/components/ui/badge";
 import { Button } from "@/components/ui/button";
 import { Select, SelectContent, SelectItem, SelectTrigger, SelectValue } from "@/components/ui/select";
 import { toast } from "@/hooks/use-toast";
-import { Wallet, TrendingUp, Clock, CheckCircle, Users, Download } from "lucide-react";
+import { Wallet, TrendingUp, Clock, CheckCircle, Download, CalendarIcon } from "lucide-react";
 
 interface Commission {
   id: string;
@@ -29,6 +29,20 @@ interface UserOption {
   email: string | null;
 }
 
+// Generate month options from current month back 12 months
+function generatePeriodOptions(): { value: string; label: string }[] {
+  const options: { value: string; label: string }[] = [];
+  const now = new Date();
+  const months = ["Januari","Februari","Maret","April","Mei","Juni","Juli","Agustus","September","Oktober","November","Desember"];
+  for (let i = 0; i < 12; i++) {
+    const d = new Date(now.getFullYear(), now.getMonth() - i, 1);
+    const value = `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
+    const label = `${months[d.getMonth()]} ${d.getFullYear()}`;
+    options.push({ value, label });
+  }
+  return options;
+}
+
 export default function Komisi() {
   const { user, role } = useAuth();
   const isAdmin = role === "super_admin" || role === "admin";
@@ -36,9 +50,11 @@ export default function Komisi() {
   const [commissions, setCommissions] = useState<Commission[]>([]);
   const [users, setUsers] = useState<UserOption[]>([]);
   const [selectedUser, setSelectedUser] = useState<string>("mine");
+  const [selectedPeriod, setSelectedPeriod] = useState<string>("all");
   const [loading, setLoading] = useState(true);
 
-  const currentPeriod = new Date().toISOString().slice(0, 7); // YYYY-MM
+  const currentPeriod = new Date().toISOString().slice(0, 7);
+  const periodOptions = useMemo(() => generatePeriodOptions(), []);
 
   const fetchCommissions = async () => {
     if (!user) return;
@@ -46,14 +62,19 @@ export default function Komisi() {
 
     const targetUserId = isAdmin && selectedUser !== "mine" ? selectedUser : user.id;
 
-    const { data } = await supabase
+    let query = supabase
       .from("commissions")
       .select("*")
       .eq("user_id", targetUserId)
       .order("created_at", { ascending: false });
 
+    if (selectedPeriod !== "all") {
+      query = query.eq("period", selectedPeriod);
+    }
+
+    const { data } = await query;
+
     if (data) {
-      // Fetch entry names
       const entryIds = [...new Set(data.map((c: any) => c.entry_id).filter(Boolean))];
       let entryMap = new Map<string, string>();
       if (entryIds.length > 0) {
@@ -80,7 +101,7 @@ export default function Komisi() {
   useEffect(() => {
     fetchCommissions();
     if (isAdmin) fetchUsers();
-  }, [user, selectedUser]);
+  }, [user, selectedUser, selectedPeriod]);
 
   const totalEarned = commissions.reduce((sum, c) => sum + c.amount, 0);
   const totalPending = commissions.filter((c) => c.status === "pending").reduce((sum, c) => sum + c.amount, 0);
@@ -126,7 +147,8 @@ export default function Komisi() {
     const a = document.createElement("a");
     a.href = url;
     const userName = selectedUser === "mine" ? "saya" : users.find((u) => u.id === selectedUser)?.full_name || "user";
-    a.download = `laporan-komisi-${userName}-${currentPeriod}.csv`;
+    const periodLabel = selectedPeriod === "all" ? "semua" : selectedPeriod;
+    a.download = `laporan-komisi-${userName}-${periodLabel}.csv`;
     a.click();
     URL.revokeObjectURL(url);
     toast({ title: "Laporan berhasil didownload" });
@@ -136,7 +158,23 @@ export default function Komisi() {
     <div className="space-y-6">
       <div className="flex flex-wrap items-center justify-between gap-3">
         <h1 className="text-2xl font-bold">Komisi & Saldo</h1>
-        <div className="flex items-center gap-2">
+        <div className="flex flex-wrap items-center gap-2">
+          {/* Period filter */}
+          <Select value={selectedPeriod} onValueChange={setSelectedPeriod}>
+            <SelectTrigger className="w-44">
+              <CalendarIcon className="mr-2 h-4 w-4 text-muted-foreground" />
+              <SelectValue placeholder="Pilih periode" />
+            </SelectTrigger>
+            <SelectContent>
+              <SelectItem value="all">Semua Periode</SelectItem>
+              {periodOptions.map((p) => (
+                <SelectItem key={p.value} value={p.value}>
+                  {p.label}
+                </SelectItem>
+              ))}
+            </SelectContent>
+          </Select>
+
           {isAdmin && (
             <Select value={selectedUser} onValueChange={setSelectedUser}>
               <SelectTrigger className="w-52">
@@ -248,7 +286,7 @@ export default function Komisi() {
               ) : commissions.length === 0 ? (
                 <TableRow>
                   <TableCell colSpan={isAdmin ? 6 : 5} className="text-center py-8 text-muted-foreground">
-                    Belum ada komisi
+                    Belum ada komisi{selectedPeriod !== "all" ? ` untuk periode ${selectedPeriod}` : ""}
                   </TableCell>
                 </TableRow>
               ) : (
