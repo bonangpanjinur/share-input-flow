@@ -42,7 +42,7 @@ serve(async (req) => {
       .eq("user_id", callerId)
       .single();
 
-    if (!callerRole || !["super_admin", "admin"].includes(callerRole.role)) {
+    if (!callerRole || !["super_admin", "admin", "admin_input"].includes(callerRole.role)) {
       return new Response(JSON.stringify({ error: "Forbidden" }), {
         status: 403, headers: { ...corsHeaders, "Content-Type": "application/json" },
       });

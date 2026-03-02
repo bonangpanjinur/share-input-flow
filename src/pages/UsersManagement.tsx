@@ -87,6 +87,7 @@ export default function UsersManagement() {
     switch (role) {
       case "super_admin": return "default";
       case "admin": return "secondary";
+      case "admin_input": return "secondary";
       case "lapangan": return "outline";
       case "nib": return "outline";
       default: return "outline";
@@ -124,6 +125,7 @@ export default function UsersManagement() {
                   <SelectTrigger><SelectValue /></SelectTrigger>
                   <SelectContent>
                     <SelectItem value="admin">Admin</SelectItem>
+                    <SelectItem value="admin_input">Admin Input</SelectItem>
                     <SelectItem value="lapangan">Lapangan</SelectItem>
                     <SelectItem value="nib">NIB</SelectItem>
                   </SelectContent>

@@ -46,6 +46,10 @@ const NAV_ITEMS = {
     { label: "Share Link", icon: Link2, path: "/share" },
     { label: "Komisi", icon: Wallet, path: "/komisi" },
   ],
+  admin_input: [
+    { label: "Dashboard", icon: LayoutDashboard, path: "/dashboard" },
+    { label: "Group Halal", icon: FolderOpen, path: "/groups" },
+  ],
 };
 
 export default function AppLayout({ children }: { children: ReactNode }) {
@@ -55,7 +59,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
   const navigate = useNavigate();
   const location = useLocation();
 
-  const items = role ? NAV_ITEMS[role] : [];
+  const items = role ? NAV_ITEMS[role as keyof typeof NAV_ITEMS] ?? [] : [];
 
   const handleSignOut = async () => {
     await signOut();

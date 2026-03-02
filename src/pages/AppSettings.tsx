@@ -8,7 +8,8 @@ import { Card, CardContent, CardHeader, CardTitle, CardDescription } from "@/com
 import { Switch } from "@/components/ui/switch";
 import { Tabs, TabsContent, TabsList, TabsTrigger } from "@/components/ui/tabs";
 import { toast } from "@/hooks/use-toast";
-import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, Wallet } from "lucide-react";
+import { Loader2, Save, Palette, Type, Image as ImageIcon, ShieldCheck, Wallet, ClipboardCheck } from "lucide-react";
+import { Checkbox } from "@/components/ui/checkbox";
 import { useAllFieldAccess } from "@/hooks/useFieldAccess";
 
 const COLOR_PRESETS = [
@@ -23,6 +24,7 @@ const COLOR_PRESETS = [
 const ROLES = [
   { key: "super_admin", label: "Super Admin" },
   { key: "admin", label: "Admin" },
+  { key: "admin_input", label: "Admin Input" },
   { key: "lapangan", label: "Lapangan" },
   { key: "nib", label: "NIB" },
 ];
@@ -47,11 +49,16 @@ export default function AppSettings() {
   const [uploading, setUploading] = useState(false);
   const [savingAccess, setSavingAccess] = useState(false);
   const [savingRates, setSavingRates] = useState(false);
+  const [savingSiapInput, setSavingSiapInput] = useState(false);
+
+  // Siap Input required fields
+  const [siapInputFields, setSiapInputFields] = useState<string[]>(["nama", "ktp", "nib", "foto_produk", "foto_verifikasi"]);
 
   // Commission rates
   const [rates, setRates] = useState<Record<string, number>>({
     super_admin: 0,
     admin: 5000,
+    admin_input: 0,
     lapangan: 10000,
     nib: 5000,
   });
@@ -82,6 +89,9 @@ export default function AppSettings() {
           if (row.key === "app_name") setAppName(row.value ?? "HalalTrack");
           if (row.key === "primary_color") setPrimaryColor(row.value ?? "217 91% 50%");
           if (row.key === "logo_url") setLogoUrl(row.value ?? "");
+          if (row.key === "siap_input_required_fields") {
+            try { setSiapInputFields(JSON.parse(row.value ?? "[]")); } catch {}
+          }
         });
       }
     };
@@ -207,12 +217,15 @@ export default function AppSettings() {
       <h1 className="text-2xl font-bold">Pengaturan</h1>
 
       <Tabs defaultValue="tampilan">
-        <TabsList className="w-full">
+        <TabsList className="w-full flex-wrap">
           <TabsTrigger value="tampilan" className="flex-1 gap-2">
             <Palette className="h-4 w-4" /> Tampilan
           </TabsTrigger>
           <TabsTrigger value="akses" className="flex-1 gap-2">
             <ShieldCheck className="h-4 w-4" /> Hak Akses
+          </TabsTrigger>
+          <TabsTrigger value="siap_input" className="flex-1 gap-2">
+            <ClipboardCheck className="h-4 w-4" /> Siap Input
           </TabsTrigger>
           <TabsTrigger value="komisi" className="flex-1 gap-2">
             <Wallet className="h-4 w-4" /> Komisi
@@ -370,6 +383,56 @@ export default function AppSettings() {
           <Button onClick={handleSaveAccess} disabled={savingAccess} className="w-full gap-2">
             {savingAccess ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
             Simpan Hak Akses
+          </Button>
+        </TabsContent>
+
+        <TabsContent value="siap_input" className="space-y-6 mt-4">
+          <Card>
+            <CardHeader>
+              <CardTitle className="flex items-center gap-2 text-lg">
+                <ClipboardCheck className="h-5 w-5" /> Syarat Status "Siap Input"
+              </CardTitle>
+              <CardDescription>
+                Pilih field yang harus terisi agar status data otomatis berubah menjadi "Siap Input"
+              </CardDescription>
+            </CardHeader>
+            <CardContent className="space-y-3">
+              {FIELDS.map((f) => (
+                <div key={f.key} className="flex items-center gap-3 rounded-lg border p-3">
+                  <Checkbox
+                    id={`siap-${f.key}`}
+                    checked={siapInputFields.includes(f.key)}
+                    onCheckedChange={(checked) => {
+                      setSiapInputFields((prev) =>
+                        checked ? [...prev, f.key] : prev.filter((k) => k !== f.key)
+                      );
+                    }}
+                  />
+                  <label htmlFor={`siap-${f.key}`} className="text-sm font-medium cursor-pointer flex-1">
+                    {f.label}
+                  </label>
+                </div>
+              ))}
+            </CardContent>
+          </Card>
+
+          <Button
+            onClick={async () => {
+              setSavingSiapInput(true);
+              await supabase
+                .from("app_settings")
+                .upsert(
+                  { key: "siap_input_required_fields", value: JSON.stringify(siapInputFields), updated_at: new Date().toISOString() },
+                  { onConflict: "key" }
+                );
+              setSavingSiapInput(false);
+              toast({ title: "Pengaturan siap input berhasil disimpan" });
+            }}
+            disabled={savingSiapInput}
+            className="w-full gap-2"
+          >
+            {savingSiapInput ? <Loader2 className="h-4 w-4 animate-spin" /> : <Save className="h-4 w-4" />}
+            Simpan Pengaturan Siap Input
           </Button>
         </TabsContent>
 

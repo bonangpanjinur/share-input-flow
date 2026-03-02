@@ -34,6 +34,7 @@ interface AuditLog {
 
 const STATUS_CONFIG: Record<string, { label: string; variant: "default" | "secondary" | "destructive" | "outline"; icon: typeof Clock }> = {
   belum_lengkap: { label: "Belum Lengkap", variant: "destructive", icon: Clock },
+  siap_input: { label: "Siap Input", variant: "secondary", icon: CheckCircle2 },
   lengkap: { label: "Lengkap", variant: "secondary", icon: CheckCircle2 },
   terverifikasi: { label: "Terverifikasi", variant: "default", icon: ShieldCheck },
   nib_selesai: { label: "NIB Selesai", variant: "secondary", icon: FileCheck },
@@ -73,7 +74,7 @@ export default function GroupDetail() {
   const [selectedEntries, setSelectedEntries] = useState<Set<string>>(new Set());
   const [downloading, setDownloading] = useState(false);
 
-  const canDownload = role === "super_admin" || role === "admin";
+  const canDownload = role === "super_admin" || role === "admin" || role === "admin_input";
 
   const filteredEntries = entries.filter((e) => {
     const matchesSearch = searchQuery === "" ||

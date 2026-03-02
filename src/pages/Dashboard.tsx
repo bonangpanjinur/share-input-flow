@@ -22,6 +22,7 @@ type DataEntry = Tables<"data_entries">;
 
 const STATUS_LABELS: Record<string, string> = {
   belum_lengkap: "Belum Lengkap",
+  siap_input: "Siap Input",
   lengkap: "Lengkap",
   terverifikasi: "Terverifikasi",
   nib_selesai: "NIB Selesai",
@@ -31,7 +32,8 @@ const STATUS_LABELS: Record<string, string> = {
 
 const STATUS_COLORS: Record<string, string> = {
   belum_lengkap: "hsl(0 84% 60%)",
-  lengkap: "hsl(45 93% 47%)",
+  siap_input: "hsl(45 93% 47%)",
+  lengkap: "hsl(120 60% 50%)",
   terverifikasi: "hsl(142 71% 45%)",
   nib_selesai: "hsl(200 80% 50%)",
   pengajuan: "hsl(270 60% 55%)",
@@ -40,7 +42,8 @@ const STATUS_COLORS: Record<string, string> = {
 
 const STATUS_BG: Record<string, string> = {
   belum_lengkap: "bg-red-100 dark:bg-red-950",
-  lengkap: "bg-yellow-100 dark:bg-yellow-950",
+  siap_input: "bg-yellow-100 dark:bg-yellow-950",
+  lengkap: "bg-lime-100 dark:bg-lime-950",
   terverifikasi: "bg-green-100 dark:bg-green-950",
   nib_selesai: "bg-blue-100 dark:bg-blue-950",
   pengajuan: "bg-purple-100 dark:bg-purple-950",
@@ -49,7 +52,8 @@ const STATUS_BG: Record<string, string> = {
 
 const STATUS_TEXT: Record<string, string> = {
   belum_lengkap: "text-red-700 dark:text-red-400",
-  lengkap: "text-yellow-700 dark:text-yellow-400",
+  siap_input: "text-yellow-700 dark:text-yellow-400",
+  lengkap: "text-lime-700 dark:text-lime-400",
   terverifikasi: "text-green-700 dark:text-green-400",
   nib_selesai: "text-blue-700 dark:text-blue-400",
   pengajuan: "text-purple-700 dark:text-purple-400",
@@ -58,6 +62,7 @@ const STATUS_TEXT: Record<string, string> = {
 
 const STATUS_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
   belum_lengkap: "destructive",
+  siap_input: "secondary",
   lengkap: "secondary",
   terverifikasi: "default",
   nib_selesai: "secondary",
@@ -67,6 +72,7 @@ const STATUS_BADGE_VARIANT: Record<string, "default" | "secondary" | "destructiv
 
 const pieChartConfig: ChartConfig = {
   belum_lengkap: { label: "Belum Lengkap", color: STATUS_COLORS.belum_lengkap },
+  siap_input: { label: "Siap Input", color: STATUS_COLORS.siap_input },
   lengkap: { label: "Lengkap", color: STATUS_COLORS.lengkap },
   terverifikasi: { label: "Terverifikasi", color: STATUS_COLORS.terverifikasi },
   nib_selesai: { label: "NIB Selesai", color: STATUS_COLORS.nib_selesai },
