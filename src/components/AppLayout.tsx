@@ -18,6 +18,7 @@ import {
   Wallet,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import NotificationBell from "@/components/NotificationBell";
 
 const NAV_ITEMS = {
   super_admin: [
@@ -80,6 +81,7 @@ export default function AppLayout({ children }: { children: ReactNode }) {
               {user?.email?.split("@")[0]}
             </button>
             <span className="text-xs text-muted-foreground capitalize">{role}</span>
+            <NotificationBell />
             <Button
               variant="ghost"
               size="icon"
@@ -144,16 +146,19 @@ export default function AppLayout({ children }: { children: ReactNode }) {
           ))}
         </nav>
         <div className="border-t p-3">
-          <button
-            onClick={() => navigate("/profile")}
-            className="mb-2 flex w-full items-center gap-2 rounded-md px-3 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
-          >
-            <UserCog className="h-4 w-4" />
-            <div className="text-left">
-              <div className="truncate text-xs">{user?.email}</div>
-              <div className="text-xs font-medium capitalize">{role?.replace("_", " ")}</div>
-            </div>
-          </button>
+          <div className="mb-2 flex items-center gap-2 px-3">
+            <NotificationBell />
+            <button
+              onClick={() => navigate("/profile")}
+              className="flex flex-1 items-center gap-2 rounded-md px-2 py-2 text-sm text-sidebar-foreground hover:bg-sidebar-accent/50 transition-colors"
+            >
+              <UserCog className="h-4 w-4" />
+              <div className="text-left">
+                <div className="truncate text-xs">{user?.email}</div>
+                <div className="text-xs font-medium capitalize">{role?.replace("_", " ")}</div>
+              </div>
+            </button>
+          </div>
           <Button
             variant="ghost"
             size="sm"

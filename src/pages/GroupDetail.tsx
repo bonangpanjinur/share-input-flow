@@ -221,6 +221,27 @@ export default function GroupDetail() {
   };
 
   const handleStatusChange = async (entryId: string, status: string) => {
+    // Duplicate KTP check for ktp_terdaftar_nib
+    if (status === "ktp_terdaftar_nib") {
+      const entry = entries.find((e) => e.id === entryId);
+      if (entry?.ktp_url) {
+        const { data: duplicates } = await supabase
+          .from("data_entries")
+          .select("id, nama, group_id")
+          .eq("ktp_url", entry.ktp_url)
+          .neq("id", entryId)
+          .limit(5);
+        if (duplicates && duplicates.length > 0) {
+          const names = duplicates.map((d) => d.nama || "Tanpa Nama").join(", ");
+          toast({
+            title: "⚠️ KTP Duplikat Terdeteksi",
+            description: `KTP ini sudah terdaftar di entri lain: ${names}. Status tetap akan diubah.`,
+            variant: "destructive",
+          });
+        }
+      }
+    }
+
     const { error } = await supabase.from("data_entries").update({ status } as any).eq("id", entryId);
     if (error) {
       toast({ title: "Gagal mengubah status", description: error.message, variant: "destructive" });
