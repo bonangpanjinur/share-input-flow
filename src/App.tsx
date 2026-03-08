@@ -18,6 +18,7 @@ import PublicStats from "@/pages/PublicStats";
 import Profile from "@/pages/Profile";
 import AppSettings from "@/pages/AppSettings";
 import Komisi from "@/pages/Komisi";
+import Notifications from "@/pages/Notifications";
 import NotFound from "@/pages/NotFound";
 import { ReactNode } from "react";
 
@@ -55,6 +56,7 @@ const AppRoutes = () => (
     <Route path="/groups/:id" element={<ProtectedRoute><GroupDetail /></ProtectedRoute>} />
     <Route path="/share" element={<ProtectedRoute><ShareLinks /></ProtectedRoute>} />
     <Route path="/komisi" element={<ProtectedRoute><Komisi /></ProtectedRoute>} />
+    <Route path="/notifications" element={<ProtectedRoute><Notifications /></ProtectedRoute>} />
     <Route path="/profile" element={<ProtectedRoute><Profile /></ProtectedRoute>} />
     <Route path="/settings" element={<ProtectedRoute allowedRoles={["super_admin"]}><AppSettings /></ProtectedRoute>} />
     <Route path="*" element={<NotFound />} />
